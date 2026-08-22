@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+
+node_modules/
+dist/
+.vite/
+
+# Firma del APK. Si esto se sube, cualquiera publica actualizaciones en tu nombre.
+*.keystore
+*.jks
+android/
+.bubblewrap/
+
+.DS_Store
+Thumbs.db
