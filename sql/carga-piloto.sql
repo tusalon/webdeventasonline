@@ -22,8 +22,8 @@ begin;
 -- ═════════════════════════════════════════════════════════════
 -- NEGOCIO PILOTO 1 — ropa (el que necesita tallas)
 -- ═════════════════════════════════════════════════════════════
--- Genera un uuid nuevo con: select gen_random_uuid();
-\set negocio1 '00000000-0000-0000-0000-000000000000'
+-- Genera un uuid con  select gen_random_uuid();  y sustituye TODAS las
+-- apariciones de 11110000-... con buscar y reemplazar antes de ejecutar.
 
 insert into negocios (
   id, slug, nombre, descripcion,
@@ -33,7 +33,7 @@ insert into negocios (
   entrega_domicilio, entrega_recogida,
   horario
 ) values (
-  :'negocio1',
+  '11110000-0000-4000-8000-000000000001',
   'nombre-de-la-tienda',          -- será ventasroma.com/t/ESTO — minúsculas y guiones
   'Nombre de la Tienda',
   'Una o dos frases. Sale en /info y en la vista previa del link.',
@@ -46,17 +46,17 @@ insert into negocios (
 );
 
 insert into categorias (negocio_id, slug, nombre, orden) values
-  (:'negocio1', 'vestidos',  'Vestidos',  1),
-  (:'negocio1', 'blusas',    'Blusas',    2),
-  (:'negocio1', 'pantalones','Pantalones',3);
+  ('11110000-0000-4000-8000-000000000001', 'vestidos',  'Vestidos',  1),
+  ('11110000-0000-4000-8000-000000000001', 'blusas',    'Blusas',    2),
+  ('11110000-0000-4000-8000-000000000001', 'pantalones','Pantalones',3);
 
 -- ── Un producto CON tallas ────────────────────────────────────
 with p as (
   insert into productos (negocio_id, categoria_id, slug, nombre, descripcion,
                          precio_base, precio_anterior, destacado, imagenes)
   values (
-    :'negocio1',
-    (select id from categorias where negocio_id = :'negocio1' and slug = 'vestidos'),
+    '11110000-0000-4000-8000-000000000001',
+    (select id from categorias where negocio_id = '11110000-0000-4000-8000-000000000001' and slug = 'vestidos'),
     'vestido-flores',
     'Vestido de flores',
     'Algodón, manga corta',
@@ -81,8 +81,8 @@ with p as (
   insert into productos (negocio_id, categoria_id, slug, nombre, descripcion,
                          precio_base, imagenes)
   values (
-    :'negocio1',
-    (select id from categorias where negocio_id = :'negocio1' and slug = 'blusas'),
+    '11110000-0000-4000-8000-000000000001',
+    (select id from categorias where negocio_id = '11110000-0000-4000-8000-000000000001' and slug = 'blusas'),
     'bolso-tejido', 'Bolso tejido', null, 2800,
     array['ventasroma/xxx/bolso-tejido-1']
   ) returning id
@@ -93,13 +93,13 @@ update variantes set stock = 7, stock_minimo = 2
 -- ═════════════════════════════════════════════════════════════
 -- NEGOCIO PILOTO 2 — alimentos (sin variantes, o por unidad de venta)
 -- ═════════════════════════════════════════════════════════════
-\set negocio2 '00000000-0000-0000-0000-000000000000'
+-- Igual que arriba: sustituye TODAS las apariciones de 22220000-...
 
 insert into negocios (id, slug, nombre, descripcion, whatsapp,
                       municipio, provincia, rubro, moneda,
                       entrega_domicilio, entrega_recogida, horario)
 values (
-  :'negocio2', 'dulceria-ejemplo', 'Dulcería Ejemplo',
+  '22220000-0000-4000-8000-000000000002', 'dulceria-ejemplo', 'Dulcería Ejemplo',
   'Encargos con 24 horas de antelación.',
   '+5350000001', 'Vedado', 'La Habana', 'alimentos', 'CUP',
   true, true,
@@ -107,8 +107,8 @@ values (
 );
 
 insert into categorias (negocio_id, slug, nombre, orden) values
-  (:'negocio2', 'dulces',  'Dulces',  1),
-  (:'negocio2', 'bebidas', 'Bebidas', 2);
+  ('22220000-0000-4000-8000-000000000002', 'dulces',  'Dulces',  1),
+  ('22220000-0000-4000-8000-000000000002', 'bebidas', 'Bebidas', 2);
 
 -- En comida las "tallas" suelen ser tamaños o presentaciones, y ahí el
 -- precio_delta sí se usa: el mismo producto vale distinto según el tamaño.
@@ -116,8 +116,8 @@ with p as (
   insert into productos (negocio_id, categoria_id, slug, nombre, descripcion,
                          precio_base, imagenes)
   values (
-    :'negocio2',
-    (select id from categorias where negocio_id = :'negocio2' and slug = 'dulces'),
+    '22220000-0000-4000-8000-000000000002',
+    (select id from categorias where negocio_id = '22220000-0000-4000-8000-000000000002' and slug = 'dulces'),
     'cake-chocolate', 'Cake de chocolate', 'Por encargo, 24 horas',
     2500,                       -- precio del tamaño más pequeño
     array['ventasroma/yyy/cake-chocolate-1']
