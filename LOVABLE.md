@@ -5,7 +5,7 @@ seguir. Pegar todo junto produce una app que compila y no sirve.
 
 **Antes de empezar:** el SQL de `sql/` ya tiene que estar ejecutado en Supabase, y
 la verificación de `03-datos-demo.sql` tiene que haber terminado en
-`OK — aislamiento, stock, variantes y buscador verificados`.
+`OK — aislamiento, escritura, stock, variantes y buscador verificados`.
 
 ---
 
@@ -14,7 +14,8 @@ la verificación de `03-datos-demo.sql` tiene que haber terminado en
 ```
 Contexto fijo de este proyecto. Respétalo en todo lo que generes:
 
-- El esquema de la base de datos YA EXISTE en Supabase y NO se toca. No generes
+- El proyecto de Supabase es pzjhvvslhawszjrtxhih y el cloud de Cloudinary
+  es sqxv3vlt. El esquema de la base de datos YA EXISTE y NO se toca. No generes
   migraciones, no crees tablas, no modifiques políticas RLS. Si crees que falta
   una columna, dilo en texto y espera; no la crees.
 - Las tablas son: negocios, perfiles, categorias, productos, variantes, pedidos,
@@ -28,7 +29,7 @@ Contexto fijo de este proyecto. Respétalo en todo lo que generes:
 - El alta de negocio se hace SOLO con la RPC `crear_negocio`.
 - Las imágenes se guardan como `public_id` de Cloudinary, nunca como URL. La URL
   se construye al pintar:
-  https://res.cloudinary.com/{cloud}/image/upload/f_auto,q_auto,w_600/{public_id}
+  https://res.cloudinary.com/sqxv3vlt/image/upload/f_auto,q_auto,w_600/{public_id}
   Usa w_600 en listados y w_1200 en la ficha. No redimensiones en el navegador.
 - Móvil primero. La mayoría de la gente entra desde el link de la bio de
   Instagram, en un móvil, con conexión lenta. Nada de tablas anchas ni menús

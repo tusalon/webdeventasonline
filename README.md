@@ -37,11 +37,11 @@ mismo repo con su integración de GitHub.
 
 ## Puesta en marcha
 
-1. Proyecto Supabase nuevo y cuenta Cloudinary nueva. Propios, no compartidos
-   con Rservasroma.
+1. Proyecto Supabase `pzjhvvslhawszjrtxhih` y cloud de Cloudinary `sqxv3vlt`. Propios,
+   no compartidos con Rservasroma.
 2. En el editor SQL de Supabase, ejecutar en orden `01`, `02` y `03`.
-3. **`03` tiene que terminar en `OK — aislamiento, stock, variantes y buscador
-   verificados`.** Si sale cualquier `FALLO:`, se arregla antes de seguir. El
+3. **`03` tiene que terminar en `OK — aislamiento, escritura, stock, variantes y
+   buscador verificados`.** Si sale cualquier `FALLO:`, se arregla antes de seguir. El
    aislamiento entre negocios es la frontera de confianza de esta app: si el
    negocio A puede leer los pedidos de B, no hay producto.
 4. `cp .env.example .env` y rellenar.
@@ -64,12 +64,12 @@ esquema. Es el único de estos que bloquea el lanzamiento.
 WhatsApp: tiene que salir con foto, nombre y precio. Lo que decide es lo que ve
 el robot:
 ```bash
-curl -s "$SUPABASE_URL/functions/v1/og-producto/demo-ropa/vestido-rojo" | grep -i 'og:'
+curl -s https://pzjhvvslhawszjrtxhih.supabase.co/functions/v1/og-producto/demo-ropa/vestido-rojo | grep -i 'og:'
 ```
 
 **Subida de imágenes** — pedir firma sin sesión tiene que devolver 401:
 ```bash
-curl -s -X POST "$SUPABASE_URL/functions/v1/firmar-subida" -o /dev/null -w '%{http_code}\n'
+curl -s -X POST https://pzjhvvslhawszjrtxhih.supabase.co/functions/v1/firmar-subida -o /dev/null -w '%{http_code}\n'
 ```
 
 ## Notas de despliegue
