@@ -121,10 +121,17 @@ end $$;
 create trigger productos_variante_por_defecto
   after insert on productos for each row execute function _variante_por_defecto();
 
--- ...y nunca se queda sin ninguna.
+-- ...y nunca se queda sin ninguna, mientras el producto siga existiendo.
 create or replace function _proteger_ultima_variante() returns trigger
 language plpgsql as $$
 begin
+  -- Si el producto ya no está, esto es el CASCADE de su propio borrado y hay
+  -- que dejarlo pasar. Sin esta salida, ni un producto ni un negocio entero
+  -- se podrían borrar jamás.
+  if not exists (select 1 from productos where id = old.producto_id) then
+    return old;
+  end if;
+
   if (select count(*) from variantes where producto_id = old.producto_id) <= 1 then
     raise exception 'Un producto no puede quedarse sin variantes';
   end if;
