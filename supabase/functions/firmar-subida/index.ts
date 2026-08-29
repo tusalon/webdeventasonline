@@ -2,14 +2,14 @@
 //
 // Por qué existe: un "unsigned upload preset" deja que cualquiera con el nombre
 // del cloud suba archivos a tu cuenta hasta agotarla. Aquí el api_secret no sale
-// nunca del servidor: se comprueba que hay sesión, se devuelve una firma atada a
-// la carpeta de ESE negocio, y el navegador sube directo a Cloudinary con ella.
+// nunca del servidor: se comprueba la sesión, se devuelve una firma atada a la
+// carpeta de ESE negocio, y el navegador sube directo a Cloudinary con ella.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-const CLOUD_NAME = Deno.env.get('CLOUDINARY_CLOUD_NAME')!
-const API_KEY    = Deno.env.get('CLOUDINARY_API_KEY')!
-const API_SECRET = Deno.env.get('CLOUDINARY_API_SECRET')!
+const CLOUD_NAME = Deno.env.get('CLOUDINARY_CLOUD_NAME')
+const API_KEY    = Deno.env.get('CLOUDINARY_API_KEY')
+const API_SECRET = Deno.env.get('CLOUDINARY_API_SECRET')
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -28,40 +28,77 @@ async function sha1(texto: string): Promise<string> {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
+// Sin esto, una llamada colgada se come el worker entero y Supabase lo mata con
+// un 546 opaco. Mejor fallar en 8s diciendo qué pasó.
+function conLimite<T>(p: Promise<T>, ms: number, que: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, rechazar) =>
+      setTimeout(() => rechazar(new Error(`tiempo agotado: ${que}`)), ms)),
+  ])
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors })
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405)
 
+  // Si falta configuración, decirlo claro. Firmar con un secret vacío produce
+  // una firma que Cloudinary rechaza con un 401 que no explica nada.
+  if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
+    const faltan = [
+      !CLOUD_NAME && 'CLOUDINARY_CLOUD_NAME',
+      !API_KEY && 'CLOUDINARY_API_KEY',
+      !API_SECRET && 'CLOUDINARY_API_SECRET',
+    ].filter(Boolean).join(', ')
+    console.error('faltan secrets:', faltan)
+    return json({ error: `Faltan secrets en el servidor: ${faltan}` }, 500)
+  }
+
   const auth = req.headers.get('Authorization')
   if (!auth) return json({ error: 'Falta la sesión' }, 401)
 
-  // Cliente con el JWT del usuario: RLS decide, no nosotros.
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_ANON_KEY')!,
-    { global: { headers: { Authorization: auth } } },
-  )
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      {
+        global: { headers: { Authorization: auth } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      },
+    )
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return json({ error: 'Sesión inválida' }, 401)
+    // auth_negocio_id() ya lee auth.uid() del propio JWT: si la sesión no vale,
+    // devuelve null. Llamarla directamente evita un getUser() extra contra la
+    // API de Auth — un viaje de red menos y un punto de cuelgue menos.
+    const { data: negocioId, error } = await conLimite(
+      supabase.rpc('auth_negocio_id'), 8000, 'auth_negocio_id',
+    )
 
-  const { data: negocioId, error } = await supabase.rpc('auth_negocio_id')
-  if (error || !negocioId) return json({ error: 'Esta cuenta no tiene negocio' }, 403)
+    if (error) {
+      console.error('rpc auth_negocio_id:', error.message)
+      return json({ error: 'No se pudo comprobar la sesión' }, 401)
+    }
+    if (!negocioId) return json({ error: 'Esta cuenta no tiene negocio' }, 403)
 
-  // La carpeta la fija el servidor. Si viniera del cliente, un negocio podría
-  // escribir en la carpeta de otro.
-  const folder = `ventasroma/${negocioId}`
-  const timestamp = Math.floor(Date.now() / 1000)
+    // La carpeta la fija el servidor. Si viniera del cliente, un negocio podría
+    // escribir en la carpeta de otro.
+    const folder = `ventasroma/${negocioId}`
+    const timestamp = Math.floor(Date.now() / 1000)
 
-  // Cloudinary firma los parámetros ordenados alfabéticamente: folder, timestamp.
-  const signature = await sha1(`folder=${folder}&timestamp=${timestamp}${API_SECRET}`)
+    // Cloudinary firma los parámetros ordenados alfabéticamente: folder, timestamp.
+    const signature = await sha1(`folder=${folder}&timestamp=${timestamp}${API_SECRET}`)
 
-  return json({
-    cloudName: CLOUD_NAME,
-    apiKey: API_KEY,
-    timestamp,
-    folder,
-    signature,
-    uploadUrl: `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-  })
+    console.log('firma emitida para', folder)
+    return json({
+      cloudName: CLOUD_NAME,
+      apiKey: API_KEY,
+      timestamp,
+      folder,
+      signature,
+      uploadUrl: `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+    })
+  } catch (e) {
+    console.error('firmar-subida:', String(e))
+    return json({ error: String(e) }, 500)
+  }
 })
