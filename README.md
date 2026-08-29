@@ -86,3 +86,31 @@ curl -s -X POST https://pzjhvvslhawszjrtxhih.supabase.co/functions/v1/firmar-sub
 
 El plan completo, con el análisis de la competencia y los riesgos, está en
 `~/.claude/plans/c-users-rodo-documents-pagina-de-ventas-fizzy-taco.md`.
+
+## Cloudinary: la API key necesita un rol
+
+Al crear una API key nueva, Cloudinary la deja **sin ningún rol asignado**. La
+key parece válida —el ping de credenciales responde 200, porque leer sí puede—
+pero cualquier subida falla con:
+
+```
+403 Request forbidden due to missing permissions (actions=["create"])
+```
+
+En Settings → API Keys → la key → **Assign product environment-level roles**,
+hay que darle un rol que permita crear recursos (Master Admin, o Media Library
+User con permiso de escritura sobre `ventasroma/`).
+
+Diagnóstico rápido, sin exponer el secret:
+
+```bash
+curl -s -X POST "$SUPABASE_URL/functions/v1/firmar-subida?ping=1" -H "Authorization: Bearer $JWT"
+```
+
+Devuelve si el par key/secret es válido, la longitud del secret y si trae
+espacios al pegar. Separa "credenciales mal" de "firma mal construida", que
+dan errores parecidos y se confunden con facilidad.
+
+**Y la key y el secret van siempre en pareja.** Al rotar, Cloudinary genera un
+par nuevo entero: cambiar solo el secret y dejar la key vieja da un 401 de firma
+inválida que no dice nada sobre la causa real.
