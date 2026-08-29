@@ -57,6 +57,23 @@ Deno.serve(async (req) => {
   const auth = req.headers.get('Authorization')
   if (!auth) return json({ error: 'Falta la sesión' }, 401)
 
+  // Diagnóstico: ?ping=1 pregunta a Cloudinary si el par key/secret es válido,
+  // sin revelar el secret. Separa "credenciales mal" de "firma mal construida",
+  // que dan el mismo 401 opaco y se confunden con facilidad.
+  if (new URL(req.url).searchParams.get('ping') === '1') {
+    const r = await conLimite(
+      fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/ping`, {
+        headers: { Authorization: 'Basic ' + btoa(`${API_KEY}:${API_SECRET}`) },
+      }), 8000, 'ping a Cloudinary')
+    return json({
+      credencialesValidas: r.ok,
+      estadoCloudinary: r.status,
+      apiKey: API_KEY,
+      longitudSecret: API_SECRET.length,
+      secretConEspacios: API_SECRET !== API_SECRET.trim(),
+    })
+  }
+
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
