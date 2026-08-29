@@ -13,7 +13,10 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-const APP_URL = Deno.env.get('APP_URL') ?? 'https://ventasroma.com'
+// Sin esquema, Response.redirect() lanza y la funcion muere con un 500.
+// Normalizar aqui cuesta una linea y evita depender de como se escribio el secret.
+const crudo = Deno.env.get('APP_URL')?.trim().replace(/\/+$/, '') || 'https://ventasroma.com'
+const APP_URL = /^https?:\/\//.test(crudo) ? crudo : `https://${crudo}`
 const CLOUD_NAME = Deno.env.get('CLOUDINARY_CLOUD_NAME')!
 
 const esc = (s: string) =>
@@ -41,8 +44,24 @@ Deno.serve(async (req) => {
         .eq('negocio_id', negocio.id).eq('slug', productoSlug).maybeSingle()
     : { data: null }
 
-  // Sin producto no se inventa una vista previa: se manda a la tienda.
-  if (!producto) return Response.redirect(`${APP_URL}/t/${negocioSlug}`, 302)
+  // Sin producto no se inventa una vista previa: se manda a la tienda. Con HTML
+  // y no con Response.redirect() porque los robots no siempre siguen redirecciones
+  // — y porque un producto borrado no puede tumbar la funcion con un 500.
+  if (!producto) {
+    const tienda = `${APP_URL}/t/${negocioSlug}`
+    const nombre = negocio?.nombre ?? 'VentasRoma'
+    return new Response(
+      `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>${esc(nombre)}</title>
+<meta property="og:type" content="website">
+<meta property="og:title" content="${esc(nombre)}">
+<meta property="og:description" content="Este producto ya no esta disponible.">
+<meta property="og:url" content="${esc(tienda)}">
+<meta http-equiv="refresh" content="0;url=${esc(tienda)}">
+</head><body><a href="${esc(tienda)}">${esc(nombre)}</a></body></html>`,
+      { status: 404, headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+    )
+  }
 
   const titulo = `${producto.nombre} — ${negocio!.nombre}`
   const precio = `${producto.precio_base} ${negocio!.moneda}`
