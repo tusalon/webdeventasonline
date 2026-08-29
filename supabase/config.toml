@@ -1,0 +1,13 @@
+project_id = "pzjhvvslhawszjrtxhih"
+
+# og-producto la lee el robot de WhatsApp, que no tiene ninguna clave.
+# Con verify_jwt (el valor por defecto) devuelve 401 y los links compartidos
+# se pegan pelados, sin foto ni precio. Ahí es donde vive la distribución de
+# este producto, así que tiene que ser pública.
+[functions.og-producto]
+verify_jwt = false
+
+# firmar-subida SÍ exige sesión: es lo que impide que cualquiera suba
+# archivos a la cuenta de Cloudinary hasta agotarla.
+[functions.firmar-subida]
+verify_jwt = true
