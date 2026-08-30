@@ -114,3 +114,39 @@ dan errores parecidos y se confunden con facilidad.
 **Y la key y el secret van siempre en pareja.** Al rotar, Cloudinary genera un
 par nuevo entero: cambiar solo el secret y dejar la key vieja da un 401 de firma
 inválida que no dice nada sobre la causa real.
+
+## Estado a 30 de agosto de 2026
+
+Verificado en producción sobre `instant-shop-snap.lovable.app`, con Supabase
+`pzjhvvslhawszjrtxhih` y Cloudinary `sqxv3vlt`.
+
+**Fase 1 — Tienda pública.** Catálogo, categorías, ficha con variantes, buscador
+sin acentos, carrito y checkout por WhatsApp. Probado con pedidos reales que
+descuentan stock en transacción.
+
+**Fase 2 — Panel.** Alta de negocio, productos con tallas, inventario, pedidos,
+ajustes, imágenes firmadas a Cloudinary. **Aislamiento verificado con un usuario
+nacido del registro real**: no ve los pedidos de otro negocio.
+
+**Fase 3 — PWA y avisos.** Instalable, service worker, push de pedido nuevo y de
+stock bajo, ambos recibidos en un móvil real con la app cerrada.
+
+### Pendiente
+
+- Dominio propio. Solo bloquea el APK (fase 4); todo lo demás corre en lovable.app.
+- Los dos negocios piloto con catálogo real.
+- `start_url` es `/admin`: un comprador que instale la tienda aterriza en el login.
+
+### Lo que cuesta horas si no se sabe
+
+- **Una API key nueva de Cloudinary nace sin roles.** El ping responde 200 porque
+  leer sí puede, pero subir da 403. Y al rotar hay que cambiar key y secret juntos.
+- **En PL/pgSQL, los argumentos con nombre van con `=>`, nunca con `:=`.** Con `:=`
+  se interpretan por posición sin avisar.
+- **pg_net 0.20.4 mete las cabeceras HTTP dentro del cuerpo.** Hay que buscar dónde
+  empieza el JSON.
+- **Las Edge Functions exigen JWT por defecto.** Las que llama un robot o un trigger
+  necesitan `verify_jwt = false` en `config.toml`.
+- **El ahorro de batería de Android retiene los push.** Llegan todos de golpe al
+  enchufar. Por eso el pedido nunca puede depender solo del aviso: WhatsApp es el
+  canal, el push es refuerzo.
