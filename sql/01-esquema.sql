@@ -294,5 +294,11 @@ begin
   end loop;
 
   update pedidos set total = v_total where id = v_pedido;
+
+  -- El aviso se lanza AQUI y no en un trigger de insert: el pedido nace con
+  -- total 0 y no se sabe cuanto vale hasta haber recorrido las lineas. Un
+  -- trigger de insert avisaba de "0 CUP" en todos los pedidos.
+  perform _avisar_pedido_creado(v_pedido);
+
   return query select v_pedido, v_total;
 end $$;
