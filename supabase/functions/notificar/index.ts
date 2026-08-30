@@ -101,6 +101,12 @@ Deno.serve(async (req) => {
     tag: tipo ?? 'ventasroma',
   })
 
+  // Prueba de diagnostico: tipo 'vacio' manda el push SIN contenido cifrado.
+  // Chrome descarta en silencio un mensaje que no puede descifrar, asi que un
+  // envio "correcto" que no aparece en pantalla puede ser un cifrado malo.
+  // Si con esto SI sale un aviso generico, el problema es el cifrado.
+  const sinCarga = tipo === 'vacio'
+
   // Se envía a todos los dispositivos del dueño en paralelo: puede tener el
   // móvil y el ordenador, y no sabemos cuál está mirando.
   const caducadas: string[] = []
@@ -108,7 +114,7 @@ Deno.serve(async (req) => {
     try {
       await webpush.sendNotification(
         { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
-        carga,
+        sinCarga ? undefined : carga,
       )
     } catch (e) {
       // 404 y 410 = el navegador desinstaló la app o revocó el permiso.
