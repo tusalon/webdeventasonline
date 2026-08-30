@@ -11,3 +11,10 @@ verify_jwt = false
 # archivos a la cuenta de Cloudinary hasta agotarla.
 [functions.firmar-subida]
 verify_jwt = true
+
+# notificar la llama un trigger de la base, que manda su secreto compartido en
+# la cabecera x-secreto y no un JWT. Con verify_jwt, la puerta de Supabase la
+# rechaza antes de llegar al codigo y no llega ningun aviso. La funcion hace su
+# propia comprobacion: sin el secreto correcto, 401.
+[functions.notificar]
+verify_jwt = false
