@@ -55,16 +55,11 @@ Deno.serve(async (req) => {
   // aqui tumbaba la funcion con un 500 sin decir que habia llegado.
   const crudo = await req.text()
 
-  // pg_net 0.20.4 mete las cabeceras HTTP crudas dentro del cuerpo, separadas
-  // del JSON por una linea en blanco. Se recorta lo que haya antes.
-  // La condicion cubre las dos formas, asi que sigue funcionando si algun dia
-  // se corrige en pg_net.
-  const corte = crudo.indexOf('
-
-')
-  const texto = (corte !== -1 && !crudo.trimStart().startsWith('{'))
-    ? crudo.slice(corte + 4)
-    : crudo
+  // pg_net 0.20.4 mete las cabeceras HTTP crudas dentro del cuerpo. En vez de
+  // buscar el separador, se busca donde empieza el JSON: da igual como componga
+  // la peticion, y sigue valiendo si algun dia lo corrigen.
+  const inicio = crudo.indexOf('{')
+  const texto = inicio > 0 ? crudo.slice(inicio) : crudo
 
   let datos: Record<string, unknown>
   try {
