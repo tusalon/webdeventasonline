@@ -27,6 +27,7 @@ const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json' } })
 
 Deno.serve(async (req) => {
+ try {
   if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405)
 
   if (!SECRETO || !VAPID_PUBLIC || !VAPID_SECRET) {
@@ -50,8 +51,26 @@ Deno.serve(async (req) => {
     return json({ error: `Claves VAPID invalidas: ${String(e)}` }, 500)
   }
 
-  const { tipo, negocio_id, titulo, cuerpo, url } = await req.json()
-  if (!negocio_id || !titulo) return json({ error: 'Faltan datos' }, 400)
+  // Se lee como TEXTO y se registra antes de interpretarlo. Un JSON invalido
+  // aqui tumbaba la funcion con un 500 sin decir que habia llegado.
+  const crudo = await req.text()
+  console.log('cuerpo recibido:', crudo.slice(0, 500))
+
+  let datos: Record<string, unknown>
+  try {
+    datos = JSON.parse(crudo)
+  } catch {
+    console.error('el cuerpo no es JSON. Primeros 200 caracteres:', crudo.slice(0, 200))
+    return json({ error: 'El cuerpo no es JSON', recibido: crudo.slice(0, 200) }, 400)
+  }
+
+  const { tipo, negocio_id, titulo, cuerpo, url } = datos as {
+    tipo?: string; negocio_id?: string; titulo?: string; cuerpo?: string; url?: string
+  }
+  if (!negocio_id || !titulo) {
+    console.error('faltan datos en el cuerpo:', crudo.slice(0, 200))
+    return json({ error: 'Faltan datos', recibido: datos }, 400)
+  }
 
   // service_role: el trigger no tiene sesión de usuario, y esto lee las
   // suscripciones de un negocio concreto que la propia base acaba de indicar.
@@ -104,4 +123,11 @@ Deno.serve(async (req) => {
   const ok = envios.filter((r) => r.status === 'fulfilled').length
   console.log(`avisos enviados: ${ok}/${subs.length}, caducadas borradas: ${caducadas.length}`)
   return json({ enviados: ok, total: subs.length, caducadas: caducadas.length })
+ } catch (e) {
+   // Cualquier fallo no previsto sale con su mensaje. pg_net solo guarda el
+   // cuerpo de la respuesta: si aqui no se escribe nada util, el trigger
+   // registra un "Internal Server Error" pelado y no hay por donde empezar.
+   console.error('notificar reventó:', String(e), (e as Error)?.stack)
+   return json({ error: String(e) }, 500)
+ }
 })
