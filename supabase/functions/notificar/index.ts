@@ -13,10 +13,15 @@
 import webpush from 'npm:web-push@3.6.7'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-const SECRETO      = Deno.env.get('SECRETO_NOTIFICAR')
-const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY')
-const VAPID_SECRET = Deno.env.get('VAPID_PRIVATE_KEY')
-const APP_URL      = Deno.env.get('APP_URL') ?? ''
+// Se limpia todo lo que llega del entorno: pegar un secret en un panel web
+// arrastra saltos de linea, espacios y comillas con una facilidad pasmosa, y
+// web-push revienta con un error que no menciona el espacio por ningun lado.
+const lee = (n: string) => Deno.env.get(n)?.trim().replace(/^["']|["']$/g, '') || ''
+
+const SECRETO      = lee('SECRETO_NOTIFICAR')
+const VAPID_PUBLIC = lee('VAPID_PUBLIC_KEY')
+const VAPID_SECRET = lee('VAPID_PRIVATE_KEY')
+const APP_URL      = lee('APP_URL')
 
 const json = (b: unknown, s = 200) =>
   new Response(JSON.stringify(b), { status: s, headers: { 'Content-Type': 'application/json' } })
@@ -32,7 +37,18 @@ Deno.serve(async (req) => {
   // bombardear a los dueños con avisos falsos.
   if (req.headers.get('x-secreto') !== SECRETO) return json({ error: 'No autorizado' }, 401)
 
-  webpush.setVapidDetails(`mailto:hola@ventasroma.com`, VAPID_PUBLIC, VAPID_SECRET)
+  // Comprobar antes de llamar: web-push lanza y el trigger solo ve un 500 mudo.
+  if (!/^[A-Za-z0-9_-]{80,90}$/.test(VAPID_PUBLIC)) {
+    console.error(`VAPID_PUBLIC_KEY con formato invalido: ${VAPID_PUBLIC.length} caracteres`)
+    return json({ error: 'La clave VAPID publica no es base64 URL-safe de 87 caracteres' }, 500)
+  }
+
+  try {
+    webpush.setVapidDetails('mailto:hola@ventasroma.com', VAPID_PUBLIC, VAPID_SECRET)
+  } catch (e) {
+    console.error('setVapidDetails:', String(e))
+    return json({ error: `Claves VAPID invalidas: ${String(e)}` }, 500)
+  }
 
   const { tipo, negocio_id, titulo, cuerpo, url } = await req.json()
   if (!negocio_id || !titulo) return json({ error: 'Faltan datos' }, 400)
