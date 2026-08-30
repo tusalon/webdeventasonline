@@ -44,12 +44,17 @@ begin
   -- un pedido tiene que entrar aunque el aviso falle.
   if v_url is null or v_secreto is null then return; end if;
 
+  -- Con => y no con :=. Dentro de PL/pgSQL, := choca con el operador de
+  -- asignacion y la llamada se interpreta por POSICION: las cabeceras
+  -- acababan enviandose como cuerpo y la funcion recibia basura.
+  -- La firma es net.http_post(url, body, params, headers, timeout).
   perform net.http_post(
-    url     := v_url,
-    headers := jsonb_build_object('Content-Type', 'application/json', 'x-secreto', v_secreto),
-    body    := jsonb_build_object(
+    url     => v_url,
+    body    => jsonb_build_object(
                  'tipo', p_tipo, 'negocio_id', p_negocio,
-                 'titulo', p_titulo, 'cuerpo', p_cuerpo, 'url', p_url)
+                 'titulo', p_titulo, 'cuerpo', p_cuerpo, 'url', p_url),
+    params  => '{}'::jsonb,
+    headers => jsonb_build_object('Content-Type', 'application/json', 'x-secreto', v_secreto)
   );
 exception when others then
   -- pg_net es asíncrono, pero si algo revienta aquí no puede tumbar el pedido.
