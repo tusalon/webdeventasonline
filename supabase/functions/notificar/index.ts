@@ -54,11 +54,21 @@ Deno.serve(async (req) => {
   // Se lee como TEXTO y se registra antes de interpretarlo. Un JSON invalido
   // aqui tumbaba la funcion con un 500 sin decir que habia llegado.
   const crudo = await req.text()
-  console.log('cuerpo recibido:', crudo.slice(0, 500))
+
+  // pg_net 0.20.4 mete las cabeceras HTTP crudas dentro del cuerpo, separadas
+  // del JSON por una linea en blanco. Se recorta lo que haya antes.
+  // La condicion cubre las dos formas, asi que sigue funcionando si algun dia
+  // se corrige en pg_net.
+  const corte = crudo.indexOf('
+
+')
+  const texto = (corte !== -1 && !crudo.trimStart().startsWith('{'))
+    ? crudo.slice(corte + 4)
+    : crudo
 
   let datos: Record<string, unknown>
   try {
-    datos = JSON.parse(crudo)
+    datos = JSON.parse(texto)
   } catch {
     console.error('el cuerpo no es JSON. Primeros 200 caracteres:', crudo.slice(0, 200))
     return json({ error: 'El cuerpo no es JSON', recibido: crudo.slice(0, 200) }, 400)
