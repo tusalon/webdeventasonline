@@ -38,10 +38,13 @@ values
 -- ─────────────────────────────────────────────────────────────
 -- Negocio A — ropa (con tallas)
 -- ─────────────────────────────────────────────────────────────
+-- Precios en USD con equivalente en CUP: 1 USD = 420 CUP. En este sentido y
+-- no al reves, que es como estaba antes de que `tasas` sustituyera a tasa_alt.
 insert into negocios (id, slug, nombre, whatsapp, rubro, provincia, municipio,
-                      moneda, moneda_alt, tasa_alt, entrega_domicilio)
+                      moneda, moneda_alt, tasas, entrega_domicilio)
 values ('11111111-0000-4000-8000-000000000001', 'demo-ropa', 'Boutique Demo',
-        '+5355551111', 'ropa', 'La Habana', 'Centro Habana', 'CUP', 'USD', 420, true);
+        '+5355551111', 'ropa', 'La Habana', 'Centro Habana',
+        'USD', 'CUP', '{"CUP": 420}'::jsonb, true);
 
 insert into perfiles (id, negocio_id)
 values ('aaaaaaaa-0000-4000-8000-000000000001', '11111111-0000-4000-8000-000000000001');
