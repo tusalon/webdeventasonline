@@ -117,7 +117,7 @@ inválida que no dice nada sobre la causa real.
 
 ## Estado a 30 de agosto de 2026
 
-Verificado en producción sobre `ventasroma26.lovable.app`, con Supabase
+Verificado en producción sobre `ventasroma26.com`, con Supabase
 `pzjhvvslhawszjrtxhih` y Cloudinary `sqxv3vlt`.
 
 **Fase 1 — Tienda pública.** Catálogo, categorías, ficha con variantes, buscador
